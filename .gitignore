@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+.env
+.ipynb_checkpoints/
+*.pyc
+*.pkl
+*.pth
+data/
+models/
+chroma_db/
