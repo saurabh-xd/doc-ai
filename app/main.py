@@ -11,6 +11,7 @@ app = FastAPI(
 )
 
 
+#This attaches the routes from both modules into the main app.
 app.include_router(documents_router)
 app.include_router(chat_router)
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pathlib import Path
 import shutil
+from uuid import uuid4
 
 from app.rag.ingest import ingest_pdf
 
@@ -21,20 +22,22 @@ async def upload_document(
             detail="Only PDF files are supported"
         )
 
-    file_path = UPLOAD_DIR / file.filename
+    document_id = str(uuid4())
+
+    file_path = UPLOAD_DIR / f"{document_id}.pdf"
 
     with file_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    document_id = Path(file.filename).stem
-
-    ingest_pdf(
+    result = ingest_pdf(
         str(file_path),
-        document_id
+        document_id,
+        file.filename
     )
 
     return {
         "message": "Document uploaded successfully",
         "document_id": document_id,
-        "filename": file.filename
+        "filename": file.filename,
+        "chunks": result["chunks"]
     }
