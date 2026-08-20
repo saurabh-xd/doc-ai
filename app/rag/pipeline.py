@@ -1,13 +1,29 @@
 from app.rag.retriever import retrieve
 from app.rag.generator import generate_answer
+from app.rag.query_rewriter import rewrite_query
+from app.rag.reranker import rerank
 
 
-def ask(question: str):
+def ask(question: str, user_id: str):
+
+    search_query = rewrite_query(question)
 
     matches = retrieve(
-        question,
-        top_k=5
+        search_query,
+        user_id=user_id,
+        top_k=20
     )
+
+    reranked = rerank(
+        search_query,
+        matches,
+        top_n=5
+    )
+
+    selected_matches = [
+        item["match"]
+        for item in reranked
+    ]
 
     answer = generate_answer(
         question,
@@ -29,5 +45,6 @@ def ask(question: str):
 
     return {
         "answer": answer,
+        "search_query": search_query,
         "sources": sources
     }
