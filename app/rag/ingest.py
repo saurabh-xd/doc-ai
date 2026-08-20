@@ -1,13 +1,14 @@
 from pathlib import Path
 from app.rag.loader import load_pdf
 from app.rag.chunker import recursive_chunk_text
-from app.rag.embeddings import embed_text
+from app.rag.embeddings import embed_texts
 from app.rag.vector_store import index
 
 def ingest_pdf(
     file_path: str,
     document_id: str,
-    filename: str
+    filename: str,
+    user_id: str
 ):
     pages = load_pdf(file_path)
 
@@ -49,6 +50,7 @@ def ingest_pdf(
             "id": vector_id,
             "values": embedding,
             "metadata": {
+                "user_id": user_id,
                 "document_id": document_id,
                 "filename": filename,
                 "page_number": chunk["page_number"],

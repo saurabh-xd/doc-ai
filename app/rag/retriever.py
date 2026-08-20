@@ -1,15 +1,20 @@
-from app.rag.embeddings import embed_text
+from app.rag.embeddings import embed_texts
 from app.rag.vector_store import index
 
 
-def retrieve(query: str, top_k: int = 5):
+def retrieve(query: str, user_id: str, top_k: int = 5):
 
-    query_vector = embed_text(query)
+    query_vector = embed_texts([query])[0]
 
     results = index.query(
         vector=query_vector,
         top_k=top_k,
-        include_metadata=True
+        include_metadata=True,
+        filter={
+            "user_id": {
+                "$eq": user_id
+            }
+        }
     )
 
     return results.matches
