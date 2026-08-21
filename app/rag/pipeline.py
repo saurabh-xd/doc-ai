@@ -2,6 +2,7 @@ from app.rag.retriever import retrieve
 from app.rag.generator import generate_answer
 from app.rag.query_rewriter import rewrite_query
 from app.rag.reranker import rerank
+from app.rag.context import build_context
 
 
 def ask(question: str, user_id: str):

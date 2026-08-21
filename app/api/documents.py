@@ -5,11 +5,14 @@ from uuid import uuid4
 
 from app.rag.ingest import ingest_pdf
 
-
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 UPLOAD_DIR = Path("data/documents")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Temporary local-development identity. Replace with authenticated user IDs
+# before deploying the API.
+DEVELOPMENT_USER_ID = "test-user"
 
 
 @router.post("/upload")
@@ -32,7 +35,8 @@ async def upload_document(
     result = ingest_pdf(
         str(file_path),
         document_id,
-        file.filename
+        file.filename,
+        DEVELOPMENT_USER_ID
     )
 
     return {

@@ -1,14 +1,16 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.rag.pipeline import ask
 from fastapi.responses import StreamingResponse
 
 from app.rag.pipeline import prepare_rag_context
-from app.rag.generator import stream_answer
+from app.rag.generator import generate_answer
 
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
+
+# Must match the temporary development identity used for uploads.
+DEVELOPMENT_USER_ID = "test-user"
 
 
 class ChatRequest(BaseModel):
@@ -20,13 +22,13 @@ def chat(request: ChatRequest):
 
     context_chunks = prepare_rag_context(
         request.question,
-        request.user_id
+        DEVELOPMENT_USER_ID
     )
 
     def generate():
 
 
-        for chunk in stream_answer(
+        for chunk in generate_answer(
             request.question,
             context_chunks
         ):
@@ -36,7 +38,3 @@ def chat(request: ChatRequest):
         generate(),
         media_type="text/plain"
     )
-
-    result = ask(request.question)
-
-    return result
