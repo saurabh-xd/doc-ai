@@ -7,6 +7,44 @@ from app.rag.reranker import rerank
 def ask(question: str, user_id: str):
 
     search_query = rewrite_query(question)
+     
+      # 2. Retrieve broad candidate set
+    matches = retrieve(
+        search_query,
+        user_id=user_id,
+        top_k=20
+    )
+      
+       # 3. Rerank
+    reranked = rerank(
+        search_query,
+        matches,
+        top_n=5
+    )
+
+      # 4. Build final context
+    context_chunks = build_context(reranked)
+
+  
+
+    answer = generate_answer(
+        question,
+        context_chunks
+    )
+
+   
+
+    return {
+        "answer": answer,
+        "sources": context_chunks
+    }
+
+def prepare_rag_context(
+    question: str,
+    user_id: str
+):
+
+    search_query = rewrite_query(question)
 
     matches = retrieve(
         search_query,
@@ -20,31 +58,6 @@ def ask(question: str, user_id: str):
         top_n=5
     )
 
-    selected_matches = [
-        item["match"]
-        for item in reranked
-    ]
+    context_chunks = build_context(reranked)
 
-    answer = generate_answer(
-        question,
-        matches
-    )
-
-    sources = []
-
-    for match in matches:
-
-        sources.append({
-            "document_id": match.metadata["document_id"],
-            "filename": match.metadata["filename"],
-            "page_number": match.metadata["page_number"],
-            "chunk_index": match.metadata["chunk_index"],
-            "score": match.score,
-            "text": match.metadata["text"]
-        })
-
-    return {
-        "answer": answer,
-        "search_query": search_query,
-        "sources": sources
-    }
+    return context_chunks

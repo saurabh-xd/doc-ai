@@ -9,23 +9,32 @@ client = genai.Client(
 )
 
 
-def generate_answer(question: str, matches):
+def generate_answer(question: str, context_chunks):
 
     context = "\n\n".join(
-        f"[Page {match.metadata['page_number']}]\n"
-        f"{match.metadata['text']}"
-        for match in matches
+        f"""
+[Source {i + 1}]
+Document: {chunk["filename"]}
+Page: {chunk["page_number"]}
+
+{chunk["text"]}
+"""
+        for i, chunk in enumerate(context_chunks)
     )
 
     prompt = f"""
-You are a document question-answering assistant.
+You are an AI document assistant.
 
-Answer the user's question using ONLY the provided context.
+Answer the user's question using ONLY the provided sources.
 
-If the answer cannot be found in the context, say:
-"I couldn't find that information in the provided documents."
+Rules:
+- Do not use outside knowledge.
+- If the sources do not contain the answer, say you could not find it.
+- Do not invent facts.
+- Cite the relevant source numbers in your answer.
 
-Context:
+Sources:
+
 {context}
 
 Question:
@@ -34,9 +43,12 @@ Question:
 Answer:
 """
 
-    response = client.models.generate_content(
+    response = client.models.generate_content_stream(
         model="gemini-2.5-flash",
         contents=prompt
     )
 
-    return response.text
+    for chunk in response:
+
+        if chunk.text:
+            yield chunk.text
