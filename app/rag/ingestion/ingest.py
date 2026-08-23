@@ -1,8 +1,8 @@
 from pathlib import Path
-from app.rag.loader import load_pdf
-from app.rag.chunker import recursive_chunk_text
-from app.rag.embeddings import embed_texts
-from app.rag.vector_store import get_index
+from app.rag.ingestion.chunker import recursive_chunk_text
+from app.rag.ingestion.loader import load_pdf
+from app.rag.retrieval.embeddings import embed_texts
+from app.rag.retrieval.vector_store import get_index
 
 EMBEDDING_BATCH_SIZE = 96
 UPSERT_BATCH_SIZE = 100

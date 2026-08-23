@@ -3,8 +3,9 @@ import logging
 from pathlib import Path
 from uuid import uuid4
 
-from app.rag.ingest import ingest_pdf
+from app.rag.ingestion.ingest import ingest_pdf
 from app.core.auth import get_current_user
+from app.schemas.documents import DocumentUploadResponse
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -15,7 +16,7 @@ MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 logger = logging.getLogger(__name__)
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),

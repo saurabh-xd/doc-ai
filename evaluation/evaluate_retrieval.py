@@ -2,8 +2,8 @@ import json
 import os
 from pathlib import Path
 
-from app.rag.reranker import rerank
-from app.rag.retriever import retrieve
+from app.rag.retrieval.reranker import rerank
+from app.rag.retrieval.retriever import retrieve
 
 
 QUESTIONS_FILE = Path(__file__).parent / "questions.json"

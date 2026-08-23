@@ -1,5 +1,5 @@
-from app.rag.embeddings import embed_texts
-from app.rag.vector_store import get_index
+from app.rag.retrieval.embeddings import embed_texts
+from app.rag.retrieval.vector_store import get_index
 
 
 def retrieve(query: str, user_id: str, top_k: int = 5):

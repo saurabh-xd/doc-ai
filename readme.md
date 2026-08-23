@@ -26,7 +26,7 @@ From the project folder, create and activate a virtual environment:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 Create a `.env` file in the project root:
@@ -54,7 +54,7 @@ alembic upgrade head
 ## Run the API
 
 ```powershell
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 ```
 
 Open <http://127.0.0.1:8000/docs> to use FastAPI's interactive API page.
@@ -135,29 +135,44 @@ and signin endpoints are included. Read the short comments in
 
 ```text
 app/
-  main.py                 Creates the FastAPI app and adds routes
-  api/auth.py             Neon-backed signup and signin endpoints
-  api/documents.py        Upload-PDF endpoint
-  api/chat.py             Question-and-answer endpoint
-  core/config.py          Environment configuration
-  core/database.py        Lazy Neon SQLAlchemy session factory
-  core/security.py        Bcrypt password helpers
-  core/auth.py            JWT creation and validation dependency
-  models/user.py          Neon user table model
+  main.py                     Creates the FastAPI app and adds routes
+  api/                        HTTP endpoint modules
+    auth.py                   Signup and signin endpoints
+    documents.py              Upload-PDF endpoint
+    chat.py                   Question-and-answer endpoint
+  core/                       Shared configuration and security
+    config.py                 Environment values
+    database.py               Lazy Neon SQLAlchemy session factory
+    security.py               Bcrypt password helpers
+    auth.py                   JWT creation and validation dependency
+  models/                     Neon database table models
+    user.py                   User table model
+  schemas/                    Pydantic request and response models
+    auth.py                   Authentication schemas
+    chat.py                   Chat request schema
+    documents.py              Document upload response schema
   rag/
-    loader.py             Extracts text from PDF pages
-    chunker.py            Splits page text into chunks
-    embeddings.py         Creates Gemini embeddings
-    ingest.py             Stores PDF chunks in Pinecone
-    retriever.py          Searches Pinecone for relevant chunks
-    query_rewriter.py     Rewrites questions for search
-    reranker.py           Reranks search results with Cohere
-    context.py            Builds the context sent to Gemini
-    generator.py          Streams the answer from Gemini
-    pipeline.py           Connects retrieval, reranking, and context building
+    pipeline.py               Coordinates retrieval and answer generation
+    ingestion/                PDF -> text -> chunks -> Pinecone
+      loader.py               Extracts text from PDF pages
+      chunker.py              Splits page text into overlapping chunks
+      ingest.py               Embeds and stores PDF chunks
+    retrieval/                Question -> relevant chunks
+      embeddings.py           Creates Gemini embeddings
+      vector_store.py         Opens the Pinecone index on demand
+      query_rewriter.py       Rewrites questions for search
+      retriever.py            Searches Pinecone for candidate chunks
+      reranker.py             Reranks candidates with Cohere
+    generation/               Evidence chunks -> answer
+      context.py              Builds the final evidence context
+      generator.py            Streams the Gemini answer
 evaluation/
   questions.json          Test questions and expected PDF pages
   evaluate_retrieval.py   Retrieval evaluation script
+tests/
+  test_auth.py             JWT and password helper checks
+  test_chunker.py          Chunk-size and overlap checks
+  test_retrieval.py        Retrieval user-filter check
 ```
 
 ## Retrieval evaluation
@@ -171,14 +186,9 @@ $env:EVALUATION_USER_ID="your-neon-user-uuid"
 python -m evaluation.evaluate_retrieval
 ```
 
-## Known issues and limits
+## Known limits
 
-- The evaluation script imports `retriever` as a standalone module even though it uses `app.rag...` imports. It should import `from app.rag.retriever import retrieve` and place the project root on the import path, or be run as a package module.
-- The chunker accepts an `overlap` value but never applies it. Long text is also not recursively split with the later separators, so chunks can exceed the requested size.
-- Empty PDF pages can produce empty chunks and send empty strings for embedding.
 - Upload work (PDF parsing, embedding, and Pinecone upsert) runs inside the request. Large PDFs can block a worker and may time out.
-- Failed uploads can leave the saved PDF on disk, and there is no delete-document endpoint or Pinecone cleanup.
-- There is no file-size limit, PDF content validation, or friendly error handling for Gemini, Cohere, Pinecone, or malformed PDFs.
+- There is no delete-document endpoint or Pinecone cleanup yet.
 - Authentication uses local JWTs; add refresh tokens, password resets, and email verification before a public deployment.
-- The chat endpoint streams only answer text; it does not return the source pages or document names to the client.
-- There are no automated tests, and API keys/index configuration are not validated at startup with clear error messages.
+- The chat endpoint streams only answer text; it does not return source pages or document names to the client.

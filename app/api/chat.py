@@ -1,22 +1,17 @@
 import logging #use logging instead of print() for application diagnostics,
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-
 from fastapi.responses import StreamingResponse
 
 from app.rag.pipeline import prepare_rag_context
-from app.rag.generator import generate_answer
+from app.rag.generation.generator import generate_answer
 from app.core.auth import get_current_user
+from app.schemas.chat import ChatRequest
 
 
 router = APIRouter(prefix="/chat", tags=["Chat"])  # like express router
 
 logger = logging.getLogger(__name__)
-
-
-class ChatRequest(BaseModel):
-    question: str = Field(min_length=1, max_length=2_000)
 
 
 @router.post("")
