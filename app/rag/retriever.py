@@ -1,12 +1,12 @@
 from app.rag.embeddings import embed_texts
-from app.rag.vector_store import index
+from app.rag.vector_store import get_index
 
 
 def retrieve(query: str, user_id: str, top_k: int = 5):
 
     query_vector = embed_texts([query])[0]
 
-    results = index.query(
+    results = get_index().query(
         vector=query_vector,
         top_k=top_k,
         include_metadata=True,

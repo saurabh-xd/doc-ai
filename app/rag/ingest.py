@@ -2,7 +2,10 @@ from pathlib import Path
 from app.rag.loader import load_pdf
 from app.rag.chunker import recursive_chunk_text
 from app.rag.embeddings import embed_texts
-from app.rag.vector_store import index
+from app.rag.vector_store import get_index
+
+EMBEDDING_BATCH_SIZE = 96
+UPSERT_BATCH_SIZE = 100
 
 def ingest_pdf(
     file_path: str,
@@ -22,6 +25,8 @@ def ingest_pdf(
         )
 
         for chunk_index, text in enumerate(page_chunks):
+            if not text.strip():
+                continue
 
             chunks.append({
                 "text": text,
@@ -29,37 +34,39 @@ def ingest_pdf(
                 "chunk_index": chunk_index
             })
 
-    texts = [
-        chunk["text"]
-        for chunk in chunks
-    ]
-
-    embeddings = embed_texts(texts)
-
     vectors = []
 
-    for chunk, embedding in zip(chunks, embeddings):
+    if not chunks:
+        raise ValueError("The PDF does not contain extractable text")
 
-        vector_id = (
-            f"{document_id}-"
-            f"{chunk['page_number']}-"
-            f"{chunk['chunk_index']}"
-        )
+    for start in range(0, len(chunks), EMBEDDING_BATCH_SIZE):
+        batch = chunks[start:start + EMBEDDING_BATCH_SIZE]
+        embeddings = embed_texts([chunk["text"] for chunk in batch])
 
-        vectors.append({
-            "id": vector_id,
-            "values": embedding,
-            "metadata": {
-                "user_id": user_id,
-                "document_id": document_id,
-                "filename": filename,
-                "page_number": chunk["page_number"],
-                "chunk_index": chunk["chunk_index"],
-                "text": chunk["text"]
-            }
-        })
+        for chunk, embedding in zip(batch, embeddings):
 
-    index.upsert(vectors=vectors)
+            vector_id = (
+                f"{document_id}-"
+                f"{chunk['page_number']}-"
+                f"{chunk['chunk_index']}"
+            )
+
+            vectors.append({
+                "id": vector_id,
+                "values": embedding,
+                "metadata": {
+                    "user_id": user_id,
+                    "document_id": document_id,
+                    "filename": filename,
+                    "page_number": chunk["page_number"],
+                    "chunk_index": chunk["chunk_index"],
+                    "text": chunk["text"]
+                }
+            })
+
+    index = get_index()
+    for start in range(0, len(vectors), UPSERT_BATCH_SIZE):
+        index.upsert(vectors=vectors[start:start + UPSERT_BATCH_SIZE])
 
     return {
         "document_id": document_id,

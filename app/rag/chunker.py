@@ -3,6 +3,15 @@ def recursive_chunk_text(
     chunk_size: int = 500,
     overlap: int = 50
 ):
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be greater than zero")
+    if not 0 <= overlap < chunk_size:
+        raise ValueError("overlap must be at least zero and smaller than chunk_size")
+
+    text = text.strip()
+    if not text:
+        return []
+
     separators = [
         "\n\n",   # paragraph
         "\n",     # line
@@ -25,37 +34,37 @@ def _split_text(
     chunk_size: int,
     overlap: int
 ):
-    if len(text) <= chunk_size:
-        return [text]
+    """Split text into bounded chunks, preferring natural break points.
 
-    separator = separators[0]
-
-    if separator == "":
-        pieces = list(text)
-    else:
-        pieces = text.split(separator)
-
+    Each following chunk starts with up to ``overlap`` characters from the
+    preceding one so information at chunk boundaries is not lost.
+    """
     chunks = []
-    current = ""
+    start = 0
 
-    for piece in pieces:
+    while start < len(text):
+        end = min(start + chunk_size, len(text))
 
-        candidate = (
-            current + separator + piece
-            if current
-            else piece
-        )
+        if end < len(text):
+            window = text[start:end]
+            split_at = 0
+            for separator in separators:
+                if not separator:
+                    continue
+                position = window.rfind(separator)
+                if position != -1:
+                    split_at = max(split_at, position + len(separator))
 
-        if len(candidate) <= chunk_size:
-            current = candidate
+            # Avoid producing a zero-length chunk when no separator occurs.
+            if split_at:
+                end = start + split_at
 
-        else:
-            if current:
-                chunks.append(current)
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
 
-            current = piece
-
-    if current:
-        chunks.append(current)
+        if end == len(text):
+            break
+        start = max(end - overlap, start + 1)
 
     return chunks

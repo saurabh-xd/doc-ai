@@ -1,14 +1,8 @@
 import json
 from pathlib import Path
-import sys
 
-# Allow importing modules from app/rag
-ROOT_DIR = Path(__file__).resolve().parents[1]
-RAG_DIR = ROOT_DIR / "app" / "rag"
-
-sys.path.append(str(RAG_DIR))
-
-from retriever import retrieve
+from app.rag.reranker import rerank
+from app.rag.retriever import retrieve
 
 
 QUESTIONS_FILE = Path(__file__).parent / "questions.json"
@@ -110,4 +104,4 @@ def evaluate_with_reranking(question_data):
         for page in retrieved_pages
     )
 
-    return hit    
+    return hit
