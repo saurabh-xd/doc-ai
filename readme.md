@@ -35,6 +35,20 @@ Create a `.env` file in the project root:
 GEMINI_API_KEY=your_gemini_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 COHERE_API_KEY=your_cohere_api_key
+DATABASE_URL=postgresql+psycopg://user:password@your-neon-host/neondb?sslmode=require
+JWT_SECRET=at-least-32-random-characters
+```
+
+For a secure value on PowerShell, generate one with:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Apply the included Neon user-table migration once the database URL is set:
+
+```powershell
+alembic upgrade head
 ```
 
 ## Run the API
@@ -107,18 +121,29 @@ curl.exe -N -X POST "http://127.0.0.1:8000/chat" -H "Content-Type: application/j
 
 The response is streamed as plain text. It is not JSON and does not currently return source information.
 
-## Important current behavior
+## Authentication setup
 
-For local development, both upload and chat use the hard-coded user ID `test-user`. This means every local user shares the same document collection. It is convenient for testing, but it is not suitable for a deployed application.
+Upload and chat require an `Authorization: Bearer <JWT>` header. The JWT's
+`sub` field is used as the Pinecone `user_id`, so users can retrieve only their
+own document chunks.
+
+The Neon `users` model, password helpers, JWT validation, migration, signup,
+and signin endpoints are included. Read the short comments in
+[`app/api/auth.py`](app/api/auth.py) to follow each security step.
 
 ## Project structure
 
 ```text
 app/
   main.py                 Creates the FastAPI app and adds routes
+  api/auth.py             Neon-backed signup and signin endpoints
   api/documents.py        Upload-PDF endpoint
   api/chat.py             Question-and-answer endpoint
-  core/auth.py            JWT helper (not currently used by the endpoints)
+  core/config.py          Environment configuration
+  core/database.py        Lazy Neon SQLAlchemy session factory
+  core/security.py        Bcrypt password helpers
+  core/auth.py            JWT creation and validation dependency
+  models/user.py          Neon user table model
   rag/
     loader.py             Extracts text from PDF pages
     chunker.py            Splits page text into chunks
@@ -137,11 +162,12 @@ evaluation/
 
 ## Retrieval evaluation
 
-`evaluation/questions.json` contains example questions and their expected page numbers. The evaluation script is intended to report Recall@5 for documents uploaded as `test-user`.
+`evaluation/questions.json` contains example questions and their expected page numbers. The evaluation script reports Recall@5 for the user ID set in `EVALUATION_USER_ID`.
 
 It currently needs a small import correction before it can run (see the known issues below). Once corrected, run it from the project root with:
 
 ```powershell
+$env:EVALUATION_USER_ID="your-neon-user-uuid"
 python -m evaluation.evaluate_retrieval
 ```
 
@@ -153,6 +179,6 @@ python -m evaluation.evaluate_retrieval
 - Upload work (PDF parsing, embedding, and Pinecone upsert) runs inside the request. Large PDFs can block a worker and may time out.
 - Failed uploads can leave the saved PDF on disk, and there is no delete-document endpoint or Pinecone cleanup.
 - There is no file-size limit, PDF content validation, or friendly error handling for Gemini, Cohere, Pinecone, or malformed PDFs.
-- The hard-coded `test-user` ID provides no real user isolation. `app/core/auth.py` exists but is not connected to the API routes.
+- Authentication uses local JWTs; add refresh tokens, password resets, and email verification before a public deployment.
 - The chat endpoint streams only answer text; it does not return the source pages or document names to the client.
 - There are no automated tests, and API keys/index configuration are not validated at startup with clear error messages.

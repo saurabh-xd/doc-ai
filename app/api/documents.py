@@ -1,25 +1,24 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 import logging
 from pathlib import Path
 from uuid import uuid4
 
 from app.rag.ingest import ingest_pdf
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 UPLOAD_DIR = Path("data/documents")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Temporary local-development identity. Replace with authenticated user IDs
-# before deploying the API.
-DEVELOPMENT_USER_ID = "test-user"
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 logger = logging.getLogger(__name__)
 
 
 @router.post("/upload")
 async def upload_document(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
 ):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -52,7 +51,7 @@ async def upload_document(
             str(file_path),
             document_id,
             file.filename,
-            DEVELOPMENT_USER_ID,
+            current_user["id"],
         )
     except ValueError as exc:
         file_path.unlink(missing_ok=True)

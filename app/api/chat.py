@@ -1,18 +1,17 @@
 import logging #use logging instead of print() for application diagnostics,
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from fastapi.responses import StreamingResponse
 
 from app.rag.pipeline import prepare_rag_context
 from app.rag.generator import generate_answer
+from app.core.auth import get_current_user
 
 
 router = APIRouter(prefix="/chat", tags=["Chat"])  # like express router
 
-# Must match the temporary development identity used for uploads.
-DEVELOPMENT_USER_ID = "test-user"
 logger = logging.getLogger(__name__)
 
 
@@ -21,12 +20,15 @@ class ChatRequest(BaseModel):
 
 
 @router.post("")
-def chat(request: ChatRequest):
+def chat(
+    request: ChatRequest,
+    current_user: dict = Depends(get_current_user),
+):
 
     try:
         context_chunks = prepare_rag_context(
             request.question,
-            DEVELOPMENT_USER_ID,
+            current_user["id"],
         )
     except Exception as exc:
         logger.exception("Retrieval failed")

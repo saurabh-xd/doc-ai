@@ -6,5 +6,5 @@ __pycache__/
 *.pkl
 *.pth
 data/
-models/
+/models/
 chroma_db/

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from app.rag.reranker import rerank
@@ -7,7 +8,7 @@ from app.rag.retriever import retrieve
 
 QUESTIONS_FILE = Path(__file__).parent / "questions.json"
 
-USER_ID = "test-user"
+USER_ID = os.getenv("EVALUATION_USER_ID")
 TOP_K = 5
 
 
@@ -41,6 +42,9 @@ def evaluate_question(question_data):
 
 
 def main():
+
+    if not USER_ID:
+        raise RuntimeError("Set EVALUATION_USER_ID before running this script")
 
     with open(QUESTIONS_FILE, "r", encoding="utf-8") as file:
         questions = json.load(file)
