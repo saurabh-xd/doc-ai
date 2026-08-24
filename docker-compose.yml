@@ -1,0 +1,22 @@
+services:
+  api:
+    build: .
+    container_name: doc-ai-api
+
+    ports:
+      - "8000:8000"
+
+    # Loads GEMINI_API_KEY, DATABASE_URL, JWT_SECRET, etc.
+    env_file:
+      - .env
+
+    # Sync your code changes into the container during development.
+    volumes:
+      - ./:/app
+
+    # --reload restarts FastAPI whenever you save Python code.
+    command: >
+      python -m uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
